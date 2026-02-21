@@ -1,0 +1,26 @@
+[package]
+name = "algosearch"
+version = "0.1.0"
+edition = "2021"
+description = "Discover and search Algolia DocSearch documentation sites"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1"
+scraper = "0.22"
+dirs = "6"
+chrono = { version = "0.4", features = ["serde"] }
+colored = "3"
+anyhow = "1"
+thiserror = "2"
+fs4 = "0.12"
+url = "2"
+urlencoding = "2"
+sysinfo = "0.34"
+clap_complete = "4"
+clap_mangen = "0.2"
