@@ -179,24 +179,38 @@ fn build_ecommerce_mapping(attributes: &[String]) -> FieldMapping {
     FieldMapping {
         title: first_match(
             attributes,
-            &["title", "name", "display_name", "product_name", "heading", "label"],
+            &[
+                "title", "name", "display_name", "product_name", "heading", "label",
+                "productName", "displayName", "legal_name", "legalName",
+            ],
         ),
         description: first_match(
             attributes,
-            &["description", "short_description", "content", "snippet", "summary", "body"],
+            &[
+                "description", "short_description", "content", "snippet", "summary", "body",
+                "descriptionShort", "shortDescription", "long_description", "descriptionLong",
+                "functional_subtitle",
+            ],
         ),
-        url: first_match(attributes, &["url", "link", "href", "permalink", "slug"]),
+        url: first_match(
+            attributes,
+            &[
+                "url", "link", "href", "permalink", "slug", "deeplink", "deepLink",
+                "product_url", "productUrl", "canonical_url",
+            ],
+        ),
         url_anchor: None,
-        price: first_match(attributes, &["price", "sale_price", "regular_price"]),
+        price: first_match(attributes, &["price", "sale_price", "regular_price", "priceFormatted"]),
         image: first_match(
             attributes,
             &[
                 "image", "image_url", "thumbnail", "thumbnail_url",
                 "url_for_cover_image", "photo", "picture", "img",
+                "imageUrl", "thumbnailUrl", "coverImage",
             ],
         ),
-        brand: first_match(attributes, &["brand", "brand_name", "manufacturer", "vendor"]),
-        category: first_match(attributes, &["category", "categories", "product_type", "collection"]),
+        brand: first_match(attributes, &["brand", "brand_name", "manufacturer", "vendor", "brandName", "brandSearch"]),
+        category: first_match(attributes, &["category", "categories", "product_type", "collection", "primaryCategory", "secondaryCategories"]),
         hierarchy: vec![],
         profile: "ecommerce".to_string(),
         discovered_attributes: attributes.to_vec(),
@@ -207,21 +221,30 @@ fn build_generic_mapping(attributes: &[String]) -> FieldMapping {
     FieldMapping {
         title: first_match(
             attributes,
-            &["title", "name", "display_name", "heading", "label", "subject"],
+            &[
+                "title", "name", "display_name", "heading", "label", "subject",
+                "productName", "displayName", "legal_name", "legalName",
+            ],
         ),
         description: first_match(
             attributes,
-            &["description", "content", "snippet", "summary", "body", "text"],
+            &[
+                "description", "content", "snippet", "summary", "body", "text",
+                "descriptionShort", "shortDescription", "short_description",
+            ],
         ),
-        url: first_match(attributes, &["url", "link", "href", "permalink", "slug"]),
+        url: first_match(
+            attributes,
+            &["url", "link", "href", "permalink", "slug", "deeplink", "deepLink"],
+        ),
         url_anchor: first_match(attributes, &["anchor"]),
         price: first_match(attributes, &["price", "sale_price"]),
         image: first_match(
             attributes,
-            &["image", "image_url", "thumbnail", "photo", "picture"],
+            &["image", "image_url", "thumbnail", "photo", "picture", "imageUrl"],
         ),
-        brand: first_match(attributes, &["brand", "brand_name", "manufacturer"]),
-        category: first_match(attributes, &["category", "categories", "type"]),
+        brand: first_match(attributes, &["brand", "brand_name", "manufacturer", "brandName"]),
+        category: first_match(attributes, &["category", "categories", "type", "primaryCategory"]),
         hierarchy: vec![],
         profile: "generic".to_string(),
         discovered_attributes: attributes.to_vec(),

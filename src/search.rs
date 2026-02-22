@@ -130,11 +130,15 @@ pub fn convert_hit(
     // URL: base + optional anchor fragment
     let url = build_url(hit, m);
 
-    // Optional fields
-    let price = m
-        .price
-        .as_ref()
-        .and_then(|p| schema::extract_string(hit, p));
+    // Optional fields — for price, prefer pre-formatted strings over raw numbers
+    let price = m.price.as_ref().and_then(|p| {
+        // Try formatted variant first (e.g. "priceFormatted" or "price.formatted")
+        let formatted_key = format!("{}Formatted", p);
+        let dotted_key = format!("{}.formatted", p);
+        schema::extract_string(hit, &formatted_key)
+            .or_else(|| schema::extract_string(hit, &dotted_key))
+            .or_else(|| schema::extract_string(hit, p))
+    });
     let image = m
         .image
         .as_ref()
