@@ -8,6 +8,7 @@ mod error;
 mod http;
 mod output;
 mod registry;
+pub mod schema;
 mod search;
 
 use clap::{CommandFactory, Parser};

@@ -14,11 +14,30 @@ pub fn format_search_results(resp: &SearchResponse) -> String {
     for hit in &resp.results {
         out.push('\n');
 
+        // Line 1: hierarchy breadcrumbs or title
         if !hit.hierarchy.is_empty() {
             let breadcrumb = hit.hierarchy.join(" > ");
             out.push_str(&format!("  {}\n", breadcrumb.bold()));
+        } else if let Some(title) = &hit.title {
+            out.push_str(&format!("  {}\n", title.bold()));
         }
 
+        // Line 2: metadata (brand, price, category) — only if any are present
+        let mut meta_parts: Vec<String> = Vec::new();
+        if let Some(brand) = &hit.brand {
+            meta_parts.push(brand.clone());
+        }
+        if let Some(price) = &hit.price {
+            meta_parts.push(format!("€{}", price));
+        }
+        if let Some(category) = &hit.category {
+            meta_parts.push(category.clone());
+        }
+        if !meta_parts.is_empty() {
+            out.push_str(&format!("  {}\n", meta_parts.join(" | ").dimmed()));
+        }
+
+        // Line 3: snippet/description
         if let Some(snippet) = &hit.snippet {
             let clean = strip_highlight_tags(snippet);
             if !clean.is_empty() {
@@ -26,6 +45,7 @@ pub fn format_search_results(resp: &SearchResponse) -> String {
             }
         }
 
+        // Line 4: URL
         if let Some(url) = &hit.url {
             out.push_str(&format!("  {} {}\n", "→".green(), url));
         }

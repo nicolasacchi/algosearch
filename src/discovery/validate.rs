@@ -1,6 +1,7 @@
 use crate::discovery::CandidateCredentials;
 use crate::error::AppResult;
 use crate::registry::AlgoliaIndex;
+use crate::schema;
 use std::collections::HashMap;
 
 pub async fn validate_candidates(
@@ -100,6 +101,11 @@ async fn validate_single(
         None
     };
 
+    // Third query: introspect index schema to detect field mapping
+    let field_mapping = schema::introspect_index(client, &cred.app_id, &cred.api_key, &cred.index_name)
+        .await
+        .map(|attrs| schema::detect_mapping(&attrs));
+
     Some(AlgoliaIndex {
         app_id: cred.app_id.clone(),
         api_key: cred.api_key.clone(),
@@ -107,6 +113,7 @@ async fn validate_single(
         record_count,
         facets,
         is_default: true,
+        field_mapping,
     })
 }
 

@@ -32,6 +32,24 @@ pub fn run(ctx: &AppContext, args: &LsArgs) -> AppResult<()> {
                 if let Some(count) = idx.record_count {
                     out.push_str(&format!("    records:    {}\n", count));
                 }
+                if let Some(mapping) = &idx.field_mapping {
+                    out.push_str(&format!("    schema:     {}\n", mapping.profile));
+                    if let Some(title) = &mapping.title {
+                        out.push_str(&format!("    title:      {}\n", title));
+                    }
+                    if let Some(desc) = &mapping.description {
+                        out.push_str(&format!("    desc:       {}\n", desc));
+                    }
+                    if let Some(url) = &mapping.url {
+                        out.push_str(&format!("    url field:  {}\n", url));
+                    }
+                    if let Some(price) = &mapping.price {
+                        out.push_str(&format!("    price:      {}\n", price));
+                    }
+                    if let Some(brand) = &mapping.brand {
+                        out.push_str(&format!("    brand:      {}\n", brand));
+                    }
+                }
                 if let Some(facets) = &idx.facets {
                     for (k, v) in facets {
                         out.push_str(&format!("    facet {}: {}\n", k, v.join(", ")));

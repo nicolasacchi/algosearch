@@ -3,6 +3,7 @@ use crate::context::AppContext;
 use crate::discovery::{self, DiscoveryResult};
 use crate::display;
 use crate::error::{AppError, AppResult};
+use crate::schema;
 use crate::search::{self, SearchHit, SearchResponse};
 
 pub async fn run(ctx: &AppContext, args: &QueryArgs) -> AppResult<()> {
@@ -29,6 +30,22 @@ pub async fn run(ctx: &AppContext, args: &QueryArgs) -> AppResult<()> {
         suggestion: Some("no valid indices found".to_string()),
     })?;
 
+    // Introspect schema on-the-fly for one-shot queries
+    let field_mapping = match &index.field_mapping {
+        Some(m) => Some(m.clone()),
+        None => {
+            ctx.presenter.progress("detecting index schema...");
+            schema::introspect_index(
+                &ctx.http_client,
+                &index.app_id,
+                &index.api_key,
+                &index.index_name,
+            )
+            .await
+            .map(|attrs| schema::detect_mapping(&attrs))
+        }
+    };
+
     let filters: Vec<(String, String)> = args
         .filters
         .iter()
@@ -51,7 +68,12 @@ pub async fn run(ctx: &AppContext, args: &QueryArgs) -> AppResult<()> {
     let site_name = crate::registry::derive_site_name(&args.url)
         .unwrap_or_else(|| "unknown".to_string());
 
-    let results: Vec<SearchHit> = raw.hits.iter().map(|h| h.to_search_hit()).collect();
+    let include_raw = ctx.presenter.is_json();
+    let results: Vec<SearchHit> = raw
+        .hits
+        .iter()
+        .map(|h| search::convert_hit(h, field_mapping.as_ref(), include_raw))
+        .collect();
     let response = SearchResponse {
         site: site_name,
         query: args.query.clone(),

@@ -1,4 +1,5 @@
 use crate::error::{AppError, AppResult};
+use crate::schema::{self, FieldMapping};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -12,10 +13,23 @@ pub struct SearchResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchHit {
     pub title: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub hierarchy: Vec<String>,
     pub snippet: Option<String>,
     pub url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub hit_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub price: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub brand: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
+    /// All raw fields from the Algolia hit (included in JSON output only)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub raw: Option<serde_json::Value>,
 }
 
 pub async fn search_algolia(
@@ -40,12 +54,8 @@ pub async fn search_algolia(
     let mut body = serde_json::json!({
         "query": query,
         "hitsPerPage": hits_per_page,
-        "attributesToRetrieve": [
-            "hierarchy.lvl0", "hierarchy.lvl1", "hierarchy.lvl2",
-            "hierarchy.lvl3", "hierarchy.lvl4", "hierarchy.lvl5",
-            "content", "url", "anchor", "type"
-        ],
-        "attributesToSnippet": ["content:40"],
+        "attributesToRetrieve": ["*"],
+        "attributesToSnippet": ["*:40"],
     });
 
     if !facet_filters.is_empty() {
@@ -84,78 +94,122 @@ pub async fn search_algolia(
 
 #[derive(Debug, Deserialize)]
 pub struct AlgoliaRawResponse {
-    pub hits: Vec<AlgoliaHit>,
+    pub hits: Vec<serde_json::Value>,
     #[serde(rename = "nbHits")]
     pub nb_hits: u64,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct AlgoliaHit {
-    pub hierarchy: Option<HitHierarchy>,
-    pub content: Option<String>,
-    pub url: Option<String>,
-    pub anchor: Option<String>,
-    #[serde(rename = "type")]
-    pub hit_type: Option<String>,
-    #[serde(rename = "_snippetResult")]
-    pub snippet_result: Option<SnippetResult>,
+/// Convert a raw Algolia hit into a SearchHit using the field mapping.
+/// Falls back to DocSearch defaults when no mapping is provided.
+pub fn convert_hit(
+    hit: &serde_json::Value,
+    mapping: Option<&FieldMapping>,
+    include_raw: bool,
+) -> SearchHit {
+    let default = schema::default_docsearch_mapping();
+    let m = mapping.unwrap_or(&default);
+
+    // Extract hierarchy breadcrumbs (DocSearch-style)
+    let hierarchy: Vec<String> = m
+        .hierarchy
+        .iter()
+        .filter_map(|path| schema::extract_string(hit, path))
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    // Title: from mapping field, or deepest hierarchy level
+    let title = if let Some(title_path) = &m.title {
+        schema::extract_string(hit, title_path)
+    } else {
+        hierarchy.last().cloned()
+    };
+
+    // Snippet: try _snippetResult for the description field first, then raw field
+    let snippet = extract_snippet(hit, m);
+
+    // URL: base + optional anchor fragment
+    let url = build_url(hit, m);
+
+    // Optional fields
+    let price = m
+        .price
+        .as_ref()
+        .and_then(|p| schema::extract_string(hit, p));
+    let image = m
+        .image
+        .as_ref()
+        .and_then(|p| schema::extract_string(hit, p));
+    let brand = m
+        .brand
+        .as_ref()
+        .and_then(|p| schema::extract_string(hit, p));
+    let category = m
+        .category
+        .as_ref()
+        .and_then(|p| schema::extract_string(hit, p));
+    let hit_type = schema::extract_string(hit, "type");
+
+    // Strip raw of internal Algolia fields for cleaner output
+    let raw = if include_raw {
+        let mut cleaned = hit.clone();
+        if let Some(obj) = cleaned.as_object_mut() {
+            obj.retain(|k, _| !k.starts_with('_') && k != "objectID");
+        }
+        Some(cleaned)
+    } else {
+        None
+    };
+
+    SearchHit {
+        title,
+        hierarchy,
+        snippet,
+        url,
+        hit_type,
+        price,
+        image,
+        brand,
+        category,
+        raw,
+    }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct HitHierarchy {
-    pub lvl0: Option<String>,
-    pub lvl1: Option<String>,
-    pub lvl2: Option<String>,
-    pub lvl3: Option<String>,
-    pub lvl4: Option<String>,
-    pub lvl5: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SnippetResult {
-    pub content: Option<SnippetValue>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SnippetValue {
-    pub value: Option<String>,
-}
-
-impl AlgoliaHit {
-    pub fn to_search_hit(&self) -> SearchHit {
-        let hierarchy: Vec<String> = if let Some(h) = &self.hierarchy {
-            [&h.lvl0, &h.lvl1, &h.lvl2, &h.lvl3, &h.lvl4, &h.lvl5]
-                .iter()
-                .filter_map(|lvl| lvl.as_ref())
-                .filter(|s| !s.is_empty())
-                .cloned()
-                .collect()
-        } else {
-            vec![]
-        };
-
-        let title = hierarchy.last().cloned();
-
-        let snippet = self
-            .snippet_result
-            .as_ref()
-            .and_then(|sr| sr.content.as_ref())
-            .and_then(|c| c.value.as_ref())
-            .cloned()
-            .or_else(|| self.content.clone());
-
-        let url = match (&self.url, &self.anchor) {
-            (Some(u), Some(a)) if !a.is_empty() => Some(format!("{}#{}", u, a)),
-            (Some(u), _) => Some(u.clone()),
-            _ => None,
-        };
-
-        SearchHit {
-            title,
-            hierarchy,
-            snippet,
-            url,
-            hit_type: self.hit_type.clone(),
+/// Try to extract a snippet from the Algolia _snippetResult, falling back to the raw field.
+fn extract_snippet(hit: &serde_json::Value, m: &FieldMapping) -> Option<String> {
+    if let Some(desc_field) = &m.description {
+        // Try _snippetResult.<field>.value first (Algolia's snippet format)
+        if let Some(snippet_val) = hit
+            .get("_snippetResult")
+            .and_then(|sr| sr.get(desc_field.as_str()))
+            .and_then(|c| c.get("value"))
+            .and_then(|v| v.as_str())
+        {
+            return Some(snippet_val.to_string());
+        }
+        // Fall back to raw field value
+        if let Some(s) = schema::extract_string(hit, desc_field) {
+            // Truncate long descriptions for display
+            if s.len() > 200 {
+                return Some(format!("{}...", &s[..200]));
+            }
+            return Some(s);
         }
     }
+    None
+}
+
+/// Build a URL from the mapping, optionally appending an anchor fragment.
+fn build_url(hit: &serde_json::Value, m: &FieldMapping) -> Option<String> {
+    let base = m
+        .url
+        .as_ref()
+        .and_then(|p| schema::extract_string(hit, p))?;
+    if let Some(anchor_path) = &m.url_anchor {
+        if let Some(anchor) = schema::extract_string(hit, anchor_path) {
+            if !anchor.is_empty() {
+                return Some(format!("{}#{}", base, anchor));
+            }
+        }
+    }
+    Some(base)
 }

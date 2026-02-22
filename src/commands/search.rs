@@ -67,7 +67,12 @@ pub async fn run(ctx: &AppContext, args: &SearchArgs) -> AppResult<()> {
 
     match raw {
         Ok(raw) => {
-            let results: Vec<SearchHit> = raw.hits.iter().map(|h| h.to_search_hit()).collect();
+            let include_raw = ctx.presenter.is_json();
+            let results: Vec<SearchHit> = raw
+                .hits
+                .iter()
+                .map(|h| search::convert_hit(h, index.field_mapping.as_ref(), include_raw))
+                .collect();
             let response = SearchResponse {
                 site: site_name.to_string(),
                 query: query.to_string(),
@@ -117,6 +122,7 @@ async fn search_all(
         .map(|f| (f.key.clone(), f.value.clone()))
         .collect();
 
+    let is_json = ctx.presenter.is_json();
     let mut handles = Vec::new();
 
     for (name, site) in &reg.sites {
@@ -125,6 +131,7 @@ async fn search_all(
             let app_id = index.app_id.clone();
             let api_key = index.api_key.clone();
             let index_name = index.index_name.clone();
+            let field_mapping = index.field_mapping.clone();
             let query = query.to_string();
             let filters = filters.clone();
             let max_results = ctx.max_results;
@@ -141,7 +148,7 @@ async fn search_all(
                     max_results,
                 )
                 .await;
-                (site_name, result)
+                (site_name, field_mapping, result)
             });
             handles.push(handle);
         }
@@ -149,8 +156,12 @@ async fn search_all(
 
     let mut all_responses: Vec<SearchResponse> = Vec::new();
     for handle in handles {
-        if let Ok((site_name, Ok(raw))) = handle.await {
-            let results: Vec<SearchHit> = raw.hits.iter().map(|h| h.to_search_hit()).collect();
+        if let Ok((site_name, field_mapping, Ok(raw))) = handle.await {
+            let results: Vec<SearchHit> = raw
+                .hits
+                .iter()
+                .map(|h| search::convert_hit(h, field_mapping.as_ref(), is_json))
+                .collect();
             all_responses.push(SearchResponse {
                 site: site_name,
                 query: query.to_string(),

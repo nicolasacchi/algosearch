@@ -1,4 +1,5 @@
 use crate::error::{AppError, AppResult};
+use crate::schema::FieldMapping;
 use chrono::{DateTime, Utc};
 use fs4::fs_std::FileExt;
 use serde::{Deserialize, Serialize};
@@ -30,6 +31,8 @@ pub struct AlgoliaIndex {
     pub record_count: Option<u64>,
     pub facets: Option<HashMap<String, Vec<String>>>,
     pub is_default: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub field_mapping: Option<FieldMapping>,
 }
 
 impl Registry {
