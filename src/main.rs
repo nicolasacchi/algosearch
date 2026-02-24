@@ -42,6 +42,8 @@ async fn main() {
         Commands::Refresh(args) => commands::refresh::run(&ctx, args).await,
         Commands::Remove(args) => commands::remove::run(&ctx, args),
         Commands::Discover(args) => commands::discover::run(&ctx, args).await,
+        Commands::Facets(args) => commands::facets::run(&ctx, args).await,
+        Commands::Export(args) => commands::export::run(&ctx, args).await,
         Commands::Doctor => commands::doctor::run(&ctx).await,
         Commands::Completions(_) | Commands::Manpage => unreachable!(),
     };

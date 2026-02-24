@@ -1,6 +1,7 @@
 use crate::error::{AppError, AppResult};
 use crate::schema::{self, FieldMapping};
 use serde::{Deserialize, Serialize};
+use urlencoding;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchResponse {
@@ -93,10 +94,217 @@ pub async fn search_algolia(
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct AlgoliaRawResponse {
     pub hits: Vec<serde_json::Value>,
     #[serde(rename = "nbHits")]
     pub nb_hits: u64,
+    #[serde(default)]
+    pub facets: Option<serde_json::Value>,
+    #[serde(rename = "nbPages", default)]
+    pub nb_pages: Option<u64>,
+    pub page: Option<u64>,
+}
+
+/// Response from the multi-query endpoint `/1/indexes/*/queries`.
+#[derive(Debug, Deserialize)]
+pub struct AlgoliaMultiQueryResponse {
+    pub results: Vec<AlgoliaRawResponse>,
+}
+
+/// A single query within a multi-query batch.
+#[derive(Debug, Serialize, Clone)]
+pub struct MultiQueryRequest {
+    #[serde(rename = "indexName")]
+    pub index_name: String,
+    pub params: String,
+}
+
+/// Search with pagination support.
+pub async fn search_algolia_paged(
+    client: &reqwest::Client,
+    app_id: &str,
+    api_key: &str,
+    index_name: &str,
+    query: &str,
+    filters: &[(String, String)],
+    hits_per_page: u32,
+    page: u32,
+) -> AppResult<AlgoliaRawResponse> {
+    let url = format!(
+        "https://{}-dsn.algolia.net/1/indexes/{}/query",
+        app_id, index_name
+    );
+
+    let facet_filters: Vec<String> = filters
+        .iter()
+        .map(|(k, v)| format!("{}:{}", k, v))
+        .collect();
+
+    let mut body = serde_json::json!({
+        "query": query,
+        "hitsPerPage": hits_per_page,
+        "page": page,
+        "attributesToRetrieve": ["*"],
+        "attributesToSnippet": ["*:40"],
+    });
+
+    if !facet_filters.is_empty() {
+        body["facetFilters"] = serde_json::json!(facet_filters);
+    }
+
+    let resp = client
+        .post(&url)
+        .header("x-algolia-application-id", app_id)
+        .header("x-algolia-api-key", api_key)
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await?;
+
+    let status = resp.status();
+    if status == 403 {
+        return Err(AppError::AlgoliaApi {
+            status: 403,
+            message: "forbidden — API key may have expired or rotated".to_string(),
+            suggestion: Some("try: algosearch refresh <site>".to_string()),
+        });
+    }
+    if !status.is_success() {
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::AlgoliaApi {
+            status: status.as_u16(),
+            message: text,
+            suggestion: None,
+        });
+    }
+
+    let raw: AlgoliaRawResponse = resp.json().await?;
+    Ok(raw)
+}
+
+/// Fetch facet values for a given attribute.
+pub async fn fetch_facets(
+    client: &reqwest::Client,
+    app_id: &str,
+    api_key: &str,
+    index_name: &str,
+    facet_attribute: &str,
+    max_values: u32,
+) -> AppResult<Vec<(String, u64)>> {
+    let url = format!(
+        "https://{}-dsn.algolia.net/1/indexes/{}/query",
+        app_id, index_name
+    );
+
+    let body = serde_json::json!({
+        "query": "",
+        "hitsPerPage": 0,
+        "facets": [facet_attribute],
+        "maxValuesPerFacet": max_values,
+        "analytics": false,
+    });
+
+    let resp = client
+        .post(&url)
+        .header("x-algolia-application-id", app_id)
+        .header("x-algolia-api-key", api_key)
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await?;
+
+    let status = resp.status();
+    if !status.is_success() {
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::AlgoliaApi {
+            status: status.as_u16(),
+            message: text,
+            suggestion: None,
+        });
+    }
+
+    let data: serde_json::Value = resp.json().await?;
+    let mut facet_values: Vec<(String, u64)> = Vec::new();
+
+    if let Some(facets) = data.get("facets").and_then(|f| f.get(facet_attribute)).and_then(|v| v.as_object()) {
+        for (name, count) in facets {
+            let c = count.as_u64().unwrap_or(0);
+            facet_values.push((name.clone(), c));
+        }
+    }
+
+    // Sort by count descending
+    facet_values.sort_by(|a, b| b.1.cmp(&a.1));
+    Ok(facet_values)
+}
+
+/// Execute a batch of queries in a single API call using the multi-query endpoint.
+pub async fn multi_query(
+    client: &reqwest::Client,
+    app_id: &str,
+    api_key: &str,
+    queries: &[MultiQueryRequest],
+) -> AppResult<AlgoliaMultiQueryResponse> {
+    let url = format!(
+        "https://{}-dsn.algolia.net/1/indexes/*/queries",
+        app_id
+    );
+
+    let body = serde_json::json!({
+        "requests": queries,
+    });
+
+    let resp = client
+        .post(&url)
+        .header("x-algolia-application-id", app_id)
+        .header("x-algolia-api-key", api_key)
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await?;
+
+    let status = resp.status();
+    if !status.is_success() {
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::AlgoliaApi {
+            status: status.as_u16(),
+            message: text,
+            suggestion: None,
+        });
+    }
+
+    let raw: AlgoliaMultiQueryResponse = resp.json().await?;
+    Ok(raw)
+}
+
+/// Build multi-query params string from components.
+pub fn build_query_params(
+    query: &str,
+    facet_filters: &[String],
+    hits_per_page: u32,
+    page: u32,
+    attributes: Option<&[&str]>,
+) -> String {
+    let mut params = vec![
+        format!("query={}", urlencoding::encode(query)),
+        format!("hitsPerPage={}", hits_per_page),
+        format!("page={}", page),
+    ];
+
+    if let Some(attrs) = attributes {
+        let attr_json = serde_json::json!(attrs);
+        params.push(format!("attributesToRetrieve={}", urlencoding::encode(&attr_json.to_string())));
+    } else {
+        params.push("attributesToRetrieve=%5B%22*%22%5D".to_string()); // ["*"]
+    }
+
+    if !facet_filters.is_empty() {
+        let ff_json = serde_json::json!(facet_filters);
+        params.push(format!("facetFilters={}", urlencoding::encode(&ff_json.to_string())));
+    }
+
+    params.join("&")
 }
 
 /// Convert a raw Algolia hit into a SearchHit using the field mapping.

@@ -1,6 +1,8 @@
 pub mod add;
 pub mod discover;
 pub mod doctor;
+pub mod export;
+pub mod facets;
 pub mod list;
 pub mod query;
 pub mod refresh;

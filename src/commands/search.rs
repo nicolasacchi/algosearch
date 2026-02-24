@@ -2,7 +2,7 @@ use crate::cli::SearchArgs;
 use crate::context::AppContext;
 use crate::display;
 use crate::error::{AppError, AppResult};
-use crate::registry::Registry;
+use crate::registry::{AlgoliaIndex, Registry};
 use crate::search::{self, SearchHit, SearchResponse};
 
 pub async fn run(ctx: &AppContext, args: &SearchArgs) -> AppResult<()> {
@@ -54,7 +54,11 @@ pub async fn run(ctx: &AppContext, args: &SearchArgs) -> AppResult<()> {
         .map(|f| (f.key.clone(), f.value.clone()))
         .collect();
 
-    let raw = search::search_algolia(
+    if args.all_pages {
+        return search_all_pages(ctx, site_name, index, query, &filters).await;
+    }
+
+    let raw = search::search_algolia_paged(
         &ctx.http_client,
         &index.app_id,
         &index.api_key,
@@ -62,6 +66,7 @@ pub async fn run(ctx: &AppContext, args: &SearchArgs) -> AppResult<()> {
         query,
         &filters,
         ctx.max_results,
+        args.page,
     )
     .await;
 
@@ -178,6 +183,70 @@ async fn search_all(
             .collect::<Vec<_>>()
             .join("\n")
     });
+
+    Ok(())
+}
+
+#[allow(unused_assignments)]
+async fn search_all_pages(
+    ctx: &AppContext,
+    site_name: &str,
+    index: &AlgoliaIndex,
+    query: &str,
+    filters: &[(String, String)],
+) -> AppResult<()> {
+    let include_raw = ctx.presenter.is_json();
+    let mut all_results: Vec<SearchHit> = Vec::new();
+    let mut total_hits: u64 = 0;
+    let mut page: u32 = 0;
+
+    loop {
+        let raw = search::search_algolia_paged(
+            &ctx.http_client,
+            &index.app_id,
+            &index.api_key,
+            &index.index_name,
+            query,
+            filters,
+            ctx.max_results,
+            page,
+        )
+        .await?;
+
+        total_hits = raw.nb_hits;
+        if raw.hits.is_empty() {
+            break;
+        }
+
+        let results: Vec<SearchHit> = raw
+            .hits
+            .iter()
+            .map(|h| search::convert_hit(h, index.field_mapping.as_ref(), include_raw))
+            .collect();
+        all_results.extend(results);
+
+        let nb_pages = raw.nb_pages.unwrap_or(1);
+        page += 1;
+        if page as u64 >= nb_pages {
+            break;
+        }
+
+        eprintln!(
+            "  page {}/{} ({} results so far)...",
+            page,
+            nb_pages,
+            all_results.len()
+        );
+    }
+
+    let response = SearchResponse {
+        site: site_name.to_string(),
+        query: query.to_string(),
+        total_hits,
+        results: all_results,
+    };
+    ctx.presenter
+        .success(&response, |r| display::format_search_results(r));
 
     Ok(())
 }

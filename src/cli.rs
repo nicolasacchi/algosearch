@@ -62,6 +62,12 @@ pub enum Commands {
     /// Discover credentials without saving
     Discover(DiscoverArgs),
 
+    /// List facet values for an attribute
+    Facets(FacetsArgs),
+
+    /// Export all records from an index
+    Export(ExportArgs),
+
     /// Run diagnostics
     Doctor,
 
@@ -122,6 +128,14 @@ pub struct SearchArgs {
     /// Facet filter (key:value), can be repeated
     #[arg(long = "filter", value_name = "KEY:VALUE")]
     pub filters: Vec<Filter>,
+
+    /// Result page number (0-indexed)
+    #[arg(long, default_value = "0")]
+    pub page: u32,
+
+    /// Fetch all pages of results
+    #[arg(long)]
+    pub all_pages: bool,
 }
 
 impl SearchArgs {
@@ -180,6 +194,64 @@ pub struct RemoveArgs {
 pub struct DiscoverArgs {
     /// Documentation site URL
     pub url: String,
+}
+
+#[derive(Args)]
+pub struct FacetsArgs {
+    /// Registered site name
+    pub site: String,
+
+    /// Attribute to list facet values for (e.g. "primaryCategory", "brand")
+    pub attribute: String,
+
+    /// Search a specific index (if site has multiple)
+    #[arg(long)]
+    pub index: Option<String>,
+
+    /// Maximum number of facet values to return
+    #[arg(long, default_value = "1000")]
+    pub max_values: u32,
+}
+
+#[derive(Args)]
+pub struct ExportArgs {
+    /// Registered site name
+    pub site: String,
+
+    /// Partition by facet attribute (required for indexes with >1000 records)
+    #[arg(long)]
+    pub partition_by: Option<String>,
+
+    /// Output format
+    #[arg(long, value_enum, default_value = "jsonl")]
+    pub format: OutputFormat,
+
+    /// Output file path (default: stdout)
+    #[arg(long, short)]
+    pub output: Option<String>,
+
+    /// Comma-separated list of fields to export (default: all)
+    #[arg(long)]
+    pub fields: Option<String>,
+
+    /// Number of queries per multi-query API call
+    #[arg(long, default_value = "5")]
+    pub batch_size: usize,
+
+    /// Search a specific index (if site has multiple)
+    #[arg(long)]
+    pub index: Option<String>,
+
+    /// Filter to apply during export (key:value), can be repeated
+    #[arg(long = "filter", value_name = "KEY:VALUE")]
+    pub filters: Vec<Filter>,
+}
+
+#[derive(Clone, ValueEnum)]
+pub enum OutputFormat {
+    Csv,
+    Jsonl,
+    Json,
 }
 
 /// Manual credentials in appId:apiKey:indexName format.

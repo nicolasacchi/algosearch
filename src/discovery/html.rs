@@ -705,7 +705,8 @@ mod tests {
 
     #[test]
     fn test_escaped_json_rsc_payload() {
-        // Simulates React Server Components escaped JSON payload (redcare.it pattern)
+        // Simulates React Server Components escaped JSON payload.
+        // Tests extraction of Algolia credentials from RSC-escaped JSON strings.
         let html = r#"something\"algoliaConfig\":{\"algoliaApiKey\":\"6706777b1652b0b3d519958312d1ffa1\",\"algoliaApplicationId\":\"58ECUELY50\",\"productsAlgoliaIndex\":\"products_prod\"}\"more stuff"#;
         let results = scan_escaped_json(html);
         assert_eq!(results.len(), 1);

@@ -86,7 +86,10 @@ pub fn detect_mapping(attributes: &[String]) -> FieldMapping {
     let has_docsearch_type = attributes.iter().any(|a| a == "type");
     let has_price = attributes
         .iter()
-        .any(|a| matches!(a.as_str(), "price" | "sale_price" | "regular_price" | "price_range"));
+        .any(|a| matches!(a.as_str(),
+            "price" | "sale_price" | "regular_price" | "price_range"
+            | "netRetailPrice" | "grossRetailPrice" | "retailPrice" | "priceInCents"
+        ));
 
     if has_hierarchy && has_docsearch_type {
         build_docsearch_mapping(attributes)
@@ -196,11 +199,14 @@ fn build_ecommerce_mapping(attributes: &[String]) -> FieldMapping {
             attributes,
             &[
                 "url", "link", "href", "permalink", "slug", "deeplink", "deepLink",
-                "product_url", "productUrl", "canonical_url",
+                "product_url", "productUrl", "canonical_url", "canonicalUrl",
             ],
         ),
         url_anchor: None,
-        price: first_match(attributes, &["price", "sale_price", "regular_price", "priceFormatted"]),
+        price: first_match(attributes, &[
+            "price", "sale_price", "regular_price", "priceFormatted",
+            "netRetailPrice", "grossRetailPrice", "retailPrice", "priceInCents",
+        ]),
         image: first_match(
             attributes,
             &[
@@ -209,8 +215,14 @@ fn build_ecommerce_mapping(attributes: &[String]) -> FieldMapping {
                 "imageUrl", "thumbnailUrl", "coverImage",
             ],
         ),
-        brand: first_match(attributes, &["brand", "brand_name", "manufacturer", "vendor", "brandName", "brandSearch"]),
-        category: first_match(attributes, &["category", "categories", "product_type", "collection", "primaryCategory", "secondaryCategories"]),
+        brand: first_match(attributes, &[
+            "brand", "brand_name", "manufacturer", "vendor", "brandName", "brandSearch",
+            "brandIntern", "brandExtern",
+        ]),
+        category: first_match(attributes, &[
+            "category", "categories", "product_type", "collection",
+            "primaryCategory", "secondaryCategories",
+        ]),
         hierarchy: vec![],
         profile: "ecommerce".to_string(),
         discovered_attributes: attributes.to_vec(),
