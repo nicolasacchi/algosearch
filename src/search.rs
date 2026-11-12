@@ -1,7 +1,6 @@
 use crate::error::{AppError, AppResult};
 use crate::schema::{self, FieldMapping};
 use serde::{Deserialize, Serialize};
-use urlencoding;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchResponse {
@@ -121,6 +120,7 @@ pub struct MultiQueryRequest {
 }
 
 /// Search with pagination support.
+#[allow(clippy::too_many_arguments)]
 pub async fn search_algolia_paged(
     client: &reqwest::Client,
     app_id: &str,
@@ -227,7 +227,11 @@ pub async fn fetch_facets(
     let data: serde_json::Value = resp.json().await?;
     let mut facet_values: Vec<(String, u64)> = Vec::new();
 
-    if let Some(facets) = data.get("facets").and_then(|f| f.get(facet_attribute)).and_then(|v| v.as_object()) {
+    if let Some(facets) = data
+        .get("facets")
+        .and_then(|f| f.get(facet_attribute))
+        .and_then(|v| v.as_object())
+    {
         for (name, count) in facets {
             let c = count.as_u64().unwrap_or(0);
             facet_values.push((name.clone(), c));
@@ -235,7 +239,7 @@ pub async fn fetch_facets(
     }
 
     // Sort by count descending
-    facet_values.sort_by(|a, b| b.1.cmp(&a.1));
+    facet_values.sort_by_key(|b| std::cmp::Reverse(b.1));
     Ok(facet_values)
 }
 
@@ -246,10 +250,7 @@ pub async fn multi_query(
     api_key: &str,
     queries: &[MultiQueryRequest],
 ) -> AppResult<AlgoliaMultiQueryResponse> {
-    let url = format!(
-        "https://{}-dsn.algolia.net/1/indexes/*/queries",
-        app_id
-    );
+    let url = format!("https://{}-dsn.algolia.net/1/indexes/*/queries", app_id);
 
     let body = serde_json::json!({
         "requests": queries,
@@ -294,14 +295,20 @@ pub fn build_query_params(
 
     if let Some(attrs) = attributes {
         let attr_json = serde_json::json!(attrs);
-        params.push(format!("attributesToRetrieve={}", urlencoding::encode(&attr_json.to_string())));
+        params.push(format!(
+            "attributesToRetrieve={}",
+            urlencoding::encode(&attr_json.to_string())
+        ));
     } else {
         params.push("attributesToRetrieve=%5B%22*%22%5D".to_string()); // ["*"]
     }
 
     if !facet_filters.is_empty() {
         let ff_json = serde_json::json!(facet_filters);
-        params.push(format!("facetFilters={}", urlencoding::encode(&ff_json.to_string())));
+        params.push(format!(
+            "facetFilters={}",
+            urlencoding::encode(&ff_json.to_string())
+        ));
     }
 
     params.join("&")

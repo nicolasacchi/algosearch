@@ -153,12 +153,18 @@ mod tests {
 
     #[test]
     fn test_derive_name_simple_domain() {
-        assert_eq!(derive_site_name("https://react.dev"), Some("react".to_string()));
+        assert_eq!(
+            derive_site_name("https://react.dev"),
+            Some("react".to_string())
+        );
     }
 
     #[test]
     fn test_derive_name_docs_prefix() {
-        assert_eq!(derive_site_name("https://docs.astro.build"), Some("astro".to_string()));
+        assert_eq!(
+            derive_site_name("https://docs.astro.build"),
+            Some("astro".to_string())
+        );
     }
 
     #[test]

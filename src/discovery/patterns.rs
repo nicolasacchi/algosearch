@@ -2,12 +2,10 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 /// Algolia application ID: exactly 10 uppercase alphanumeric chars.
-pub static APP_ID_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"[A-Z0-9]{10}").unwrap());
+pub static APP_ID_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[A-Z0-9]{10}").unwrap());
 
 /// Legacy DocSearch API key: exactly 32 lowercase hex chars.
-pub static LEGACY_KEY_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"[a-f0-9]{32}").unwrap());
+pub static LEGACY_KEY_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[a-f0-9]{32}").unwrap());
 
 /// Modern Algolia API key: 20-64 mixed alphanumeric chars.
 /// Must contain at least one letter and one digit (to exclude plain words or numbers).

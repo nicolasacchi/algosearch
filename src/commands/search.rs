@@ -6,9 +6,7 @@ use crate::registry::{AlgoliaIndex, Registry};
 use crate::search::{self, SearchHit, SearchResponse};
 
 pub async fn run(ctx: &AppContext, args: &SearchArgs) -> AppResult<()> {
-    let (site_opt, query) = args
-        .resolve()
-        .map_err(|e| AppError::Other(e))?;
+    let (site_opt, query) = args.resolve().map_err(AppError::Other)?;
 
     let reg = Registry::load(&ctx.registry_path)?;
 
@@ -17,10 +15,12 @@ pub async fn run(ctx: &AppContext, args: &SearchArgs) -> AppResult<()> {
     }
 
     let site_name = site_opt.unwrap();
-    let site = reg.get_site(site_name).ok_or_else(|| AppError::SiteNotFound {
-        name: site_name.to_string(),
-        suggestion: Some("run 'algosearch ls' to see registered sites".to_string()),
-    })?;
+    let site = reg
+        .get_site(site_name)
+        .ok_or_else(|| AppError::SiteNotFound {
+            name: site_name.to_string(),
+            suggestion: Some("run 'algosearch ls' to see registered sites".to_string()),
+        })?;
 
     let index = if let Some(idx_name) = &args.index {
         site.indices
@@ -85,7 +85,7 @@ pub async fn run(ctx: &AppContext, args: &SearchArgs) -> AppResult<()> {
                 results,
             };
             ctx.presenter
-                .success(&response, |r| display::format_search_results(r));
+                .success(&response, display::format_search_results);
         }
         Err(AppError::AlgoliaApi { status: 403, .. }) => {
             if let Some(answer) = ctx
@@ -131,7 +131,12 @@ async fn search_all(
     let mut handles = Vec::new();
 
     for (name, site) in &reg.sites {
-        if let Some(index) = site.indices.iter().find(|i| i.is_default).or(site.indices.first()) {
+        if let Some(index) = site
+            .indices
+            .iter()
+            .find(|i| i.is_default)
+            .or(site.indices.first())
+        {
             let client = ctx.http_client.clone();
             let app_id = index.app_id.clone();
             let api_key = index.api_key.clone();
@@ -179,7 +184,7 @@ async fn search_all(
     ctx.presenter.success(&all_responses, |responses| {
         responses
             .iter()
-            .map(|r| display::format_search_results(r))
+            .map(display::format_search_results)
             .collect::<Vec<_>>()
             .join("\n")
     });
@@ -246,7 +251,7 @@ async fn search_all_pages(
         results: all_results,
     };
     ctx.presenter
-        .success(&response, |r| display::format_search_results(r));
+        .success(&response, display::format_search_results);
 
     Ok(())
 }

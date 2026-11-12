@@ -16,8 +16,7 @@ pub struct AppContext {
 impl AppContext {
     pub fn new(cli: &Cli) -> Self {
         let agent_info = agent::detect(cli.agent, cli.json);
-        let http_client = http::build_client(cli.timeout)
-            .expect("failed to build HTTP client");
+        let http_client = http::build_client(cli.timeout).expect("failed to build HTTP client");
         let presenter = Presenter::new(cli.json, agent_info.is_agent, cli.verbose);
         let registry_path = default_registry_path();
 

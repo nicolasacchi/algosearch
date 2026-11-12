@@ -84,12 +84,19 @@ pub async fn introspect_index(
 pub fn detect_mapping(attributes: &[String]) -> FieldMapping {
     let has_hierarchy = attributes.iter().any(|a| a == "hierarchy.lvl0");
     let has_docsearch_type = attributes.iter().any(|a| a == "type");
-    let has_price = attributes
-        .iter()
-        .any(|a| matches!(a.as_str(),
-            "price" | "sale_price" | "regular_price" | "price_range"
-            | "netRetailPrice" | "grossRetailPrice" | "retailPrice" | "priceInCents"
-        ));
+    let has_price = attributes.iter().any(|a| {
+        matches!(
+            a.as_str(),
+            "price"
+                | "sale_price"
+                | "regular_price"
+                | "price_range"
+                | "netRetailPrice"
+                | "grossRetailPrice"
+                | "retailPrice"
+                | "priceInCents"
+        )
+    });
 
     if has_hierarchy && has_docsearch_type {
         build_docsearch_mapping(attributes)
@@ -183,46 +190,104 @@ fn build_ecommerce_mapping(attributes: &[String]) -> FieldMapping {
         title: first_match(
             attributes,
             &[
-                "title", "name", "display_name", "product_name", "heading", "label",
-                "productName", "displayName", "legal_name", "legalName",
+                "title",
+                "name",
+                "display_name",
+                "product_name",
+                "heading",
+                "label",
+                "productName",
+                "displayName",
+                "legal_name",
+                "legalName",
             ],
         ),
         description: first_match(
             attributes,
             &[
-                "description", "short_description", "content", "snippet", "summary", "body",
-                "descriptionShort", "shortDescription", "long_description", "descriptionLong",
+                "description",
+                "short_description",
+                "content",
+                "snippet",
+                "summary",
+                "body",
+                "descriptionShort",
+                "shortDescription",
+                "long_description",
+                "descriptionLong",
                 "functional_subtitle",
             ],
         ),
         url: first_match(
             attributes,
             &[
-                "url", "link", "href", "permalink", "slug", "deeplink", "deepLink",
-                "product_url", "productUrl", "canonical_url", "canonicalUrl",
+                "url",
+                "link",
+                "href",
+                "permalink",
+                "slug",
+                "deeplink",
+                "deepLink",
+                "product_url",
+                "productUrl",
+                "canonical_url",
+                "canonicalUrl",
             ],
         ),
         url_anchor: None,
-        price: first_match(attributes, &[
-            "price", "sale_price", "regular_price", "priceFormatted",
-            "netRetailPrice", "grossRetailPrice", "retailPrice", "priceInCents",
-        ]),
+        price: first_match(
+            attributes,
+            &[
+                "price",
+                "sale_price",
+                "regular_price",
+                "priceFormatted",
+                "netRetailPrice",
+                "grossRetailPrice",
+                "retailPrice",
+                "priceInCents",
+            ],
+        ),
         image: first_match(
             attributes,
             &[
-                "image", "image_url", "thumbnail", "thumbnail_url",
-                "url_for_cover_image", "photo", "picture", "img",
-                "imageUrl", "thumbnailUrl", "coverImage",
+                "image",
+                "image_url",
+                "thumbnail",
+                "thumbnail_url",
+                "url_for_cover_image",
+                "photo",
+                "picture",
+                "img",
+                "imageUrl",
+                "thumbnailUrl",
+                "coverImage",
             ],
         ),
-        brand: first_match(attributes, &[
-            "brand", "brand_name", "manufacturer", "vendor", "brandName", "brandSearch",
-            "brandIntern", "brandExtern",
-        ]),
-        category: first_match(attributes, &[
-            "category", "categories", "product_type", "collection",
-            "primaryCategory", "secondaryCategories",
-        ]),
+        brand: first_match(
+            attributes,
+            &[
+                "brand",
+                "brand_name",
+                "manufacturer",
+                "vendor",
+                "brandName",
+                "brandSearch",
+                "brandIntern",
+                "brandExtern",
+            ],
+        ),
+        category: first_match(
+            attributes,
+            &[
+                "category",
+                "categories",
+                "product_type",
+                "collection",
+                "primaryCategory",
+                "secondaryCategories",
+            ],
+        ),
         hierarchy: vec![],
         profile: "ecommerce".to_string(),
         discovered_attributes: attributes.to_vec(),
@@ -234,29 +299,65 @@ fn build_generic_mapping(attributes: &[String]) -> FieldMapping {
         title: first_match(
             attributes,
             &[
-                "title", "name", "display_name", "heading", "label", "subject",
-                "productName", "displayName", "legal_name", "legalName",
+                "title",
+                "name",
+                "display_name",
+                "heading",
+                "label",
+                "subject",
+                "productName",
+                "displayName",
+                "legal_name",
+                "legalName",
             ],
         ),
         description: first_match(
             attributes,
             &[
-                "description", "content", "snippet", "summary", "body", "text",
-                "descriptionShort", "shortDescription", "short_description",
+                "description",
+                "content",
+                "snippet",
+                "summary",
+                "body",
+                "text",
+                "descriptionShort",
+                "shortDescription",
+                "short_description",
             ],
         ),
         url: first_match(
             attributes,
-            &["url", "link", "href", "permalink", "slug", "deeplink", "deepLink"],
+            &[
+                "url",
+                "link",
+                "href",
+                "permalink",
+                "slug",
+                "deeplink",
+                "deepLink",
+            ],
         ),
         url_anchor: first_match(attributes, &["anchor"]),
         price: first_match(attributes, &["price", "sale_price"]),
         image: first_match(
             attributes,
-            &["image", "image_url", "thumbnail", "photo", "picture", "imageUrl"],
+            &[
+                "image",
+                "image_url",
+                "thumbnail",
+                "photo",
+                "picture",
+                "imageUrl",
+            ],
         ),
-        brand: first_match(attributes, &["brand", "brand_name", "manufacturer", "brandName"]),
-        category: first_match(attributes, &["category", "categories", "type", "primaryCategory"]),
+        brand: first_match(
+            attributes,
+            &["brand", "brand_name", "manufacturer", "brandName"],
+        ),
+        category: first_match(
+            attributes,
+            &["category", "categories", "type", "primaryCategory"],
+        ),
         hierarchy: vec![],
         profile: "generic".to_string(),
         discovered_attributes: attributes.to_vec(),
@@ -301,7 +402,10 @@ mod tests {
     #[test]
     fn test_extract_string_simple() {
         let hit = serde_json::json!({"name": "Test Product", "price": 19.99});
-        assert_eq!(extract_string(&hit, "name"), Some("Test Product".to_string()));
+        assert_eq!(
+            extract_string(&hit, "name"),
+            Some("Test Product".to_string())
+        );
         assert_eq!(extract_string(&hit, "price"), Some("19.99".to_string()));
         assert_eq!(extract_string(&hit, "missing"), None);
     }
@@ -309,8 +413,14 @@ mod tests {
     #[test]
     fn test_extract_string_nested() {
         let hit = serde_json::json!({"hierarchy": {"lvl0": "Docs", "lvl1": "API"}});
-        assert_eq!(extract_string(&hit, "hierarchy.lvl0"), Some("Docs".to_string()));
-        assert_eq!(extract_string(&hit, "hierarchy.lvl1"), Some("API".to_string()));
+        assert_eq!(
+            extract_string(&hit, "hierarchy.lvl0"),
+            Some("Docs".to_string())
+        );
+        assert_eq!(
+            extract_string(&hit, "hierarchy.lvl1"),
+            Some("API".to_string())
+        );
         assert_eq!(extract_string(&hit, "hierarchy.lvl2"), None);
     }
 
@@ -359,11 +469,7 @@ mod tests {
 
     #[test]
     fn test_detect_generic() {
-        let attrs = vec![
-            "title".to_string(),
-            "body".to_string(),
-            "slug".to_string(),
-        ];
+        let attrs = vec!["title".to_string(), "body".to_string(), "slug".to_string()];
         let mapping = detect_mapping(&attrs);
         assert_eq!(mapping.profile, "generic");
         assert_eq!(mapping.title, Some("title".to_string()));

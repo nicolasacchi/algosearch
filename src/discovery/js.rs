@@ -8,9 +8,8 @@ const MAX_CONCURRENT: usize = 5;
 const MAX_FILE_SIZE: usize = 2 * 1024 * 1024; // 2MB
 
 // Matches <script src="..."> and <script src=...> (quoted or unquoted)
-static SCRIPT_SRC_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?i)<script[^>]+src=(?:["']([^"']+)["']|([^\s>]+))"#).unwrap()
-});
+static SCRIPT_SRC_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?i)<script[^>]+src=(?:["']([^"']+)["']|([^\s>]+))"#).unwrap());
 
 // Matches <link rel="modulepreload" href="..."> and unquoted variants
 static MODULEPRELOAD_RE: LazyLock<Regex> = LazyLock::new(|| {
@@ -19,7 +18,14 @@ static MODULEPRELOAD_RE: LazyLock<Regex> = LazyLock::new(|| {
 
 /// Keywords that suggest a JS file may contain search config.
 const JS_KEYWORDS: &[&str] = &[
-    "search", "docsearch", "algolia", "config", "app", "main", "index", "chunk",
+    "search",
+    "docsearch",
+    "algolia",
+    "config",
+    "app",
+    "main",
+    "index",
+    "chunk",
 ];
 
 pub async fn scan_js_bundles(
@@ -48,9 +54,7 @@ pub async fn scan_js_bundles(
     // Resolve relative URLs and filter to likely candidates
     let mut resolved_urls: Vec<String> = js_urls
         .into_iter()
-        .filter_map(|src| {
-            base_url.join(&src).ok().map(|u| u.to_string())
-        })
+        .filter_map(|src| base_url.join(&src).ok().map(|u| u.to_string()))
         .filter(|url| is_likely_candidate(url))
         .collect();
 
@@ -97,9 +101,8 @@ fn is_likely_candidate(url: &str) -> bool {
     JS_KEYWORDS.iter().any(|kw| lower.contains(kw))
 }
 
-static HASHED_FILENAME_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\.[a-f0-9]{6,12}\.js$").unwrap()
-});
+static HASHED_FILENAME_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\.[a-f0-9]{6,12}\.js$").unwrap());
 
 async fn fetch_and_extract(client: &reqwest::Client, url: &str) -> Vec<CandidateCredentials> {
     let resp = match client.get(url).send().await {
@@ -159,7 +162,10 @@ mod tests {
             .iter()
             .map(|c| c.get(1).or_else(|| c.get(2)).unwrap().as_str())
             .collect();
-        assert_eq!(urls, vec!["/js/quoted.js", "/js/unquoted.js", "/js/single.js"]);
+        assert_eq!(
+            urls,
+            vec!["/js/quoted.js", "/js/unquoted.js", "/js/single.js"]
+        );
     }
 
     #[test]

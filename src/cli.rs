@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand, Args, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::fmt;
 use std::str::FromStr;
 
@@ -148,7 +148,9 @@ impl SearchArgs {
         } else {
             match &self.second {
                 Some(query) => Ok((Some(&self.first), query)),
-                None => Err("missing <query> argument. Usage: algosearch search <site> <query>".to_string()),
+                None => Err(
+                    "missing <query> argument. Usage: algosearch search <site> <query>".to_string(),
+                ),
             }
         }
     }

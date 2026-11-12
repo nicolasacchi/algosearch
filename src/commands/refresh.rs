@@ -34,8 +34,7 @@ pub async fn run(ctx: &AppContext, args: &RefreshArgs) -> AppResult<()> {
             }
         };
 
-        ctx.presenter
-            .progress(&format!("refreshing {}...", name));
+        ctx.presenter.progress(&format!("refreshing {}...", name));
 
         match discovery::discover(&url, &ctx.http_client, ctx.verbose).await {
             Ok(DiscoveryResult::Found(discovered)) => {

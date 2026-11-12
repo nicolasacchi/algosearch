@@ -25,9 +25,8 @@ pub fn run(ctx: &AppContext, args: &RemoveArgs) -> AppResult<()> {
         removed: args.site.clone(),
     };
 
-    ctx.presenter.success(&result, |r| {
-        format!("Removed '{}'", r.removed)
-    });
+    ctx.presenter
+        .success(&result, |r| format!("Removed '{}'", r.removed));
 
     Ok(())
 }

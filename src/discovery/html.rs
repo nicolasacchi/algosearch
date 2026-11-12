@@ -1,6 +1,6 @@
 use crate::discovery::extraction::{extract_brace_balanced, extract_kv_from_js_object};
 use crate::discovery::patterns::{
-    self, APP_ID_PROPERTIES, API_KEY_PROPERTIES, INDEX_NAME_PROPERTIES,
+    self, API_KEY_PROPERTIES, APP_ID_PROPERTIES, INDEX_NAME_PROPERTIES,
 };
 use crate::discovery::CandidateCredentials;
 use regex::Regex;
@@ -25,9 +25,8 @@ pub fn scan_html(html: &str) -> Vec<CandidateCredentials> {
 
 // Strategy 1a: DocSearch initialization pattern
 // docsearch({appId: '...', apiKey: '...', indexName: '...'})
-static DOCSEARCH_CALL_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(?:docsearch|DocSearch)\s*\(").unwrap()
-});
+static DOCSEARCH_CALL_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?:docsearch|DocSearch)\s*\(").unwrap());
 
 fn scan_docsearch_init(html: &str) -> Vec<CandidateCredentials> {
     let mut results = Vec::new();
@@ -48,7 +47,10 @@ fn scan_docsearch_init(html: &str) -> Vec<CandidateCredentials> {
 // Strategy 1b: Algolia client initialization
 // algoliasearch('APPID', 'APIKEY')
 static ALGOLIA_CLIENT_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"algoliasearch\s*\(\s*['"`]([A-Z0-9]{10})['"`]\s*,\s*['"`]([a-zA-Z0-9]{20,64})['"`]"#).unwrap()
+    Regex::new(
+        r#"algoliasearch\s*\(\s*['"`]([A-Z0-9]{10})['"`]\s*,\s*['"`]([a-zA-Z0-9]{20,64})['"`]"#,
+    )
+    .unwrap()
 });
 
 fn scan_algoliasearch_init(html: &str) -> Vec<CandidateCredentials> {
@@ -137,9 +139,8 @@ static NEXT_DATA_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"<script\s+id="__NEXT_DATA__"[^>]*>([\s\S]*?)</script>"#).unwrap()
 });
 
-static NUXT_DATA_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"window\.__NUXT__\s*=\s*(\{[\s\S]*?\})\s*[;<]"#).unwrap()
-});
+static NUXT_DATA_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"window\.__NUXT__\s*=\s*(\{[\s\S]*?\})\s*[;<]"#).unwrap());
 
 fn scan_framework_hydration(html: &str) -> Vec<CandidateCredentials> {
     let mut results = Vec::new();
@@ -170,9 +171,8 @@ fn scan_framework_hydration(html: &str) -> Vec<CandidateCredentials> {
 }
 
 // Strategy 1e & 1f: Generic config objects (algolia: {, searchConfig: {, etc.)
-static CONFIG_OBJECT_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?:algolia|searchConfig|search|docsearch)\s*[:=]\s*\{").unwrap()
-});
+static CONFIG_OBJECT_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?:algolia|searchConfig|search|docsearch)\s*[:=]\s*\{").unwrap());
 
 fn scan_generic_config_objects(html: &str) -> Vec<CandidateCredentials> {
     let mut results = Vec::new();
@@ -239,8 +239,10 @@ fn scan_escaped_json(html: &str) -> Vec<CandidateCredentials> {
 // Strategy: window.env / window.config / window.__APP_CONFIG__ global JSON objects
 // These often contain ALGOLIA_APPLICATION_ID, ALGOLIA_SEARCH_API_KEY, etc.
 static WINDOW_GLOBAL_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?:window\.(?:env|config|__APP_CONFIG__|__ENV__|settings)|globalThis\.env)\s*=\s*\{")
-        .unwrap()
+    Regex::new(
+        r"(?:window\.(?:env|config|__APP_CONFIG__|__ENV__|settings)|globalThis\.env)\s*=\s*\{",
+    )
+    .unwrap()
 });
 
 fn scan_window_globals(html: &str) -> Vec<CandidateCredentials> {
@@ -272,9 +274,7 @@ fn scan_window_globals(html: &str) -> Vec<CandidateCredentials> {
 /// Extract partial algolia credentials from a JSON object.
 /// Unlike extract_algolia_from_json, this handles cases where the index name
 /// might be in a separate JS file (e.g., window.env has appId + apiKey only).
-fn extract_algolia_from_json_partial(
-    value: &serde_json::Value,
-) -> Option<CandidateCredentials> {
+fn extract_algolia_from_json_partial(value: &serde_json::Value) -> Option<CandidateCredentials> {
     let map = value.as_object()?;
 
     let app_id = map
@@ -326,9 +326,7 @@ fn scan_preconnect_hints(html: &str) -> Vec<CandidateCredentials> {
 
             // We have the app_id from preconnect. Now search the entire HTML
             // for an API key and index name in proximity to any algolia-related context.
-            if let Some((api_key, index_name)) =
-                find_key_and_index_for_app_id(html, &app_id_str)
-            {
+            if let Some((api_key, index_name)) = find_key_and_index_for_app_id(html, &app_id_str) {
                 results.push(CandidateCredentials {
                     app_id: app_id_str,
                     api_key,
@@ -363,13 +361,13 @@ fn find_key_and_index_for_app_id(html: &str, app_id: &str) -> Option<(String, St
         // Try modern key with context scoring
         for key_match in patterns::MODERN_KEY_RE.find_iter(window) {
             let key_str = key_match.as_str();
-            if patterns::LEGACY_KEY_RE.is_match(key_str) || !patterns::is_mixed_alphanumeric(key_str)
+            if patterns::LEGACY_KEY_RE.is_match(key_str)
+                || !patterns::is_mixed_alphanumeric(key_str)
             {
                 continue;
             }
             // Lower threshold since we already know the app_id
-            let score =
-                patterns::context_score(window, key_match.start(), key_str.len());
+            let score = patterns::context_score(window, key_match.start(), key_str.len());
             if score >= 2 {
                 if let Some(idx) = find_index_name_nearby(html, abs_pos) {
                     return Some((key_str.to_string(), idx));
@@ -456,7 +454,9 @@ fn scan_proximity_patterns(html: &str) -> Vec<CandidateCredentials> {
 }
 
 // Helper: extract credentials from a key-value map
-fn credentials_from_kv(kv: &std::collections::HashMap<String, String>) -> Option<CandidateCredentials> {
+fn credentials_from_kv(
+    kv: &std::collections::HashMap<String, String>,
+) -> Option<CandidateCredentials> {
     let app_id = find_value(kv, APP_ID_PROPERTIES)?;
     let api_key = find_value(kv, API_KEY_PROPERTIES)?;
     let index_name = find_value(kv, INDEX_NAME_PROPERTIES)?;
@@ -483,10 +483,7 @@ fn find_value(kv: &std::collections::HashMap<String, String>, names: &[&str]) ->
 
 // Helper: find an index name near a given offset
 static INDEX_NAME_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r#"(?i)(?:\w*index[-_]?name\w*)\s*[:='"]\s*['"`]?([a-zA-Z0-9_-]+)['"`]?"#,
-    )
-    .unwrap()
+    Regex::new(r#"(?i)(?:\w*index[-_]?name\w*)\s*[:='"]\s*['"`]?([a-zA-Z0-9_-]+)['"`]?"#).unwrap()
 });
 
 fn find_index_name_nearby(text: &str, offset: usize) -> Option<String> {
@@ -677,7 +674,7 @@ mod tests {
         let results = scan_html(html);
         // Both strategies find the same credentials — dedup happens at orchestrator level
         // But scan_html itself returns all candidates (dedup is in mod.rs)
-        assert!(results.len() >= 1);
+        assert!(!results.is_empty());
         // All results should have the same credentials
         for r in &results {
             assert_eq!(r.app_id, "BH4D9OD16A");

@@ -7,8 +7,7 @@ use crate::schema;
 use crate::search::{self, SearchHit, SearchResponse};
 
 pub async fn run(ctx: &AppContext, args: &QueryArgs) -> AppResult<()> {
-    let url =
-        url::Url::parse(&args.url).map_err(|e| AppError::InvalidUrl(e.to_string()))?;
+    let url = url::Url::parse(&args.url).map_err(|e| AppError::InvalidUrl(e.to_string()))?;
 
     ctx.presenter.progress("discovering credentials...");
 
@@ -25,10 +24,13 @@ pub async fn run(ctx: &AppContext, args: &QueryArgs) -> AppResult<()> {
         }
     };
 
-    let index = discovered.indices.first().ok_or_else(|| AppError::DiscoveryFailed {
-        url: args.url.clone(),
-        suggestion: Some("no valid indices found".to_string()),
-    })?;
+    let index = discovered
+        .indices
+        .first()
+        .ok_or_else(|| AppError::DiscoveryFailed {
+            url: args.url.clone(),
+            suggestion: Some("no valid indices found".to_string()),
+        })?;
 
     // Introspect schema on-the-fly for one-shot queries
     let field_mapping = match &index.field_mapping {
@@ -65,8 +67,8 @@ pub async fn run(ctx: &AppContext, args: &QueryArgs) -> AppResult<()> {
     )
     .await?;
 
-    let site_name = crate::registry::derive_site_name(&args.url)
-        .unwrap_or_else(|| "unknown".to_string());
+    let site_name =
+        crate::registry::derive_site_name(&args.url).unwrap_or_else(|| "unknown".to_string());
 
     let include_raw = ctx.presenter.is_json();
     let results: Vec<SearchHit> = raw
@@ -82,7 +84,7 @@ pub async fn run(ctx: &AppContext, args: &QueryArgs) -> AppResult<()> {
     };
 
     ctx.presenter
-        .success(&response, |r| display::format_search_results(r));
+        .success(&response, display::format_search_results);
 
     Ok(())
 }

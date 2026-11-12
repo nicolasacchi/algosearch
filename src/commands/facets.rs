@@ -23,10 +23,12 @@ struct FacetValue {
 pub async fn run(ctx: &AppContext, args: &FacetsArgs) -> AppResult<()> {
     let reg = Registry::load(&ctx.registry_path)?;
 
-    let site = reg.get_site(&args.site).ok_or_else(|| AppError::SiteNotFound {
-        name: args.site.clone(),
-        suggestion: Some("run 'algosearch ls' to see registered sites".to_string()),
-    })?;
+    let site = reg
+        .get_site(&args.site)
+        .ok_or_else(|| AppError::SiteNotFound {
+            name: args.site.clone(),
+            suggestion: Some("run 'algosearch ls' to see registered sites".to_string()),
+        })?;
 
     let index = if let Some(idx_name) = &args.index {
         site.indices
@@ -72,7 +74,7 @@ pub async fn run(ctx: &AppContext, args: &FacetsArgs) -> AppResult<()> {
             .collect(),
     };
 
-    ctx.presenter.success(&response, |r| format_facets(r));
+    ctx.presenter.success(&response, format_facets);
 
     Ok(())
 }

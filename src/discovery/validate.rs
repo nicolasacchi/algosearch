@@ -102,9 +102,10 @@ async fn validate_single(
     };
 
     // Third query: introspect index schema to detect field mapping
-    let field_mapping = schema::introspect_index(client, &cred.app_id, &cred.api_key, &cred.index_name)
-        .await
-        .map(|attrs| schema::detect_mapping(&attrs));
+    let field_mapping =
+        schema::introspect_index(client, &cred.app_id, &cred.api_key, &cred.index_name)
+            .await
+            .map(|attrs| schema::detect_mapping(&attrs));
 
     Some(AlgoliaIndex {
         app_id: cred.app_id.clone(),
@@ -124,10 +125,7 @@ async fn discover_and_validate(
     cred: &CandidateCredentials,
 ) -> Vec<AlgoliaIndex> {
     // First try the "list indices" API (may be blocked by search-only keys)
-    let list_url = format!(
-        "https://{}-dsn.algolia.net/1/indexes",
-        cred.app_id
-    );
+    let list_url = format!("https://{}-dsn.algolia.net/1/indexes", cred.app_id);
 
     if let Ok(resp) = client
         .get(&list_url)

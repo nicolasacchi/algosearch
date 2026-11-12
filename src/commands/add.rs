@@ -6,8 +6,7 @@ use crate::registry::{self, RegisteredSite, Registry};
 use chrono::Utc;
 
 pub async fn run(ctx: &AppContext, args: &AddArgs) -> AppResult<()> {
-    let url = url::Url::parse(&args.url)
-        .map_err(|e| AppError::InvalidUrl(e.to_string()))?;
+    let url = url::Url::parse(&args.url).map_err(|e| AppError::InvalidUrl(e.to_string()))?;
 
     let site_name = args
         .name
@@ -30,7 +29,9 @@ pub async fn run(ctx: &AppContext, args: &AddArgs) -> AppResult<()> {
                 app_id: creds.app_id.clone(),
                 index_name: creds.index_name.clone(),
                 reason: "credentials did not pass validation".to_string(),
-                suggestion: Some("check that the appId, apiKey, and indexName are correct".to_string()),
+                suggestion: Some(
+                    "check that the appId, apiKey, and indexName are correct".to_string(),
+                ),
             });
         }
         (validated, "manual".to_string())

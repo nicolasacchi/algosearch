@@ -50,9 +50,8 @@ pub fn extract_brace_balanced(text: &str) -> Option<&str> {
 
 /// Extract key-value pairs from a JS object literal.
 /// Handles both quoted and unquoted keys, and single/double quoted values.
-static KV_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"['"]?(\w+)['"]?\s*[:=]\s*['"`]([^'"`]+)['"`]"#).unwrap()
-});
+static KV_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"['"]?(\w+)['"]?\s*[:=]\s*['"`]([^'"`]+)['"`]"#).unwrap());
 
 pub fn extract_kv_from_js_object(text: &str) -> HashMap<String, String> {
     let mut map = HashMap::new();
@@ -67,10 +66,7 @@ pub fn extract_kv_from_js_object(text: &str) -> HashMap<String, String> {
 /// Traverse a serde_json::Value using JSON pointer-like paths.
 /// Tries multiple paths, returns the first hit.
 #[allow(dead_code)]
-pub fn extract_from_json_value(
-    value: &serde_json::Value,
-    paths: &[&str],
-) -> Option<String> {
+pub fn extract_from_json_value(value: &serde_json::Value, paths: &[&str]) -> Option<String> {
     for path in paths {
         if let Some(v) = value.pointer(path) {
             if let Some(s) = v.as_str() {

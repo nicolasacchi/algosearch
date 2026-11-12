@@ -9,10 +9,12 @@ use std::io::Write;
 pub async fn run(ctx: &AppContext, args: &ExportArgs) -> AppResult<()> {
     let reg = Registry::load(&ctx.registry_path)?;
 
-    let site = reg.get_site(&args.site).ok_or_else(|| AppError::SiteNotFound {
-        name: args.site.clone(),
-        suggestion: Some("run 'algosearch ls' to see registered sites".to_string()),
-    })?;
+    let site = reg
+        .get_site(&args.site)
+        .ok_or_else(|| AppError::SiteNotFound {
+            name: args.site.clone(),
+            suggestion: Some("run 'algosearch ls' to see registered sites".to_string()),
+        })?;
 
     let index = if let Some(idx_name) = &args.index {
         site.indices
@@ -47,14 +49,14 @@ pub async fn run(ctx: &AppContext, args: &ExportArgs) -> AppResult<()> {
         .collect();
 
     // Open output
-    let mut writer: Box<dyn Write> = if let Some(path) = &args.output {
-        Box::new(
-            std::fs::File::create(path)
-                .map_err(|e| AppError::Other(format!("cannot create output file '{}': {}", path, e)))?,
-        )
-    } else {
-        Box::new(std::io::stdout().lock())
-    };
+    let mut writer: Box<dyn Write> =
+        if let Some(path) = &args.output {
+            Box::new(std::fs::File::create(path).map_err(|e| {
+                AppError::Other(format!("cannot create output file '{}': {}", path, e))
+            })?)
+        } else {
+            Box::new(std::io::stdout().lock())
+        };
 
     let mut seen_ids: HashSet<String> = HashSet::new();
     let mut total_exported: usize = 0;
@@ -83,7 +85,7 @@ pub async fn run(ctx: &AppContext, args: &ExportArgs) -> AppResult<()> {
         );
 
         // Build multi-query batches from partition values
-        let batch_size = args.batch_size.max(1).min(20); // Clamp to 1..20
+        let batch_size = args.batch_size.clamp(1, 20); // Clamp to 1..20
         let partitions: Vec<&(String, u64)> = facet_values.iter().collect();
 
         for chunk in partitions.chunks(batch_size) {
@@ -98,7 +100,7 @@ pub async fn run(ctx: &AppContext, args: &ExportArgs) -> AppResult<()> {
                     &filters,
                     1000, // Max per partition
                     0,
-                    fields.as_ref().map(|f| f.as_slice()),
+                    fields.as_deref(),
                 );
 
                 queries.push(search::MultiQueryRequest {
@@ -107,13 +109,9 @@ pub async fn run(ctx: &AppContext, args: &ExportArgs) -> AppResult<()> {
                 });
             }
 
-            let multi_resp = search::multi_query(
-                &ctx.http_client,
-                &index.app_id,
-                &index.api_key,
-                &queries,
-            )
-            .await?;
+            let multi_resp =
+                search::multi_query(&ctx.http_client, &index.app_id, &index.api_key, &queries)
+                    .await?;
             total_api_calls += 1;
 
             for result in &multi_resp.results {
@@ -140,7 +138,7 @@ pub async fn run(ctx: &AppContext, args: &ExportArgs) -> AppResult<()> {
                 }
             }
 
-            if total_api_calls % 10 == 0 || total_api_calls <= 2 {
+            if total_api_calls.is_multiple_of(10) || total_api_calls <= 2 {
                 eprintln!(
                     "  {} API calls, {} records exported...",
                     total_api_calls, total_exported
@@ -149,12 +147,8 @@ pub async fn run(ctx: &AppContext, args: &ExportArgs) -> AppResult<()> {
         }
     } else {
         // Non-partitioned export: simple pagination (limited to 1000 by Algolia)
-        eprintln!(
-            "Exporting without partitioning (max 1000 records)."
-        );
-        eprintln!(
-            "Hint: use --partition-by <attribute> for indexes with >1000 records"
-        );
+        eprintln!("Exporting without partitioning (max 1000 records).");
+        eprintln!("Hint: use --partition-by <attribute> for indexes with >1000 records");
 
         let mut page: u32 = 0;
         loop {
@@ -168,7 +162,10 @@ pub async fn run(ctx: &AppContext, args: &ExportArgs) -> AppResult<()> {
                     .iter()
                     .map(|f| {
                         let parts: Vec<&str> = f.splitn(2, ':').collect();
-                        (parts[0].to_string(), parts.get(1).unwrap_or(&"").to_string())
+                        (
+                            parts[0].to_string(),
+                            parts.get(1).unwrap_or(&"").to_string(),
+                        )
                     })
                     .collect::<Vec<_>>(),
                 ctx.max_results.max(100), // Use at least 100 per page for export
@@ -243,7 +240,11 @@ fn write_record(
             } else {
                 strip_internal(hit)
             };
-            writeln!(writer, "{}", serde_json::to_string(&output).unwrap_or_default())?;
+            writeln!(
+                writer,
+                "{}",
+                serde_json::to_string(&output).unwrap_or_default()
+            )?;
         }
         OutputFormat::Json => {
             // JSON format writes one object per line (same as JSONL for streaming)
@@ -253,7 +254,11 @@ fn write_record(
             } else {
                 strip_internal(hit)
             };
-            writeln!(writer, "{}", serde_json::to_string_pretty(&output).unwrap_or_default())?;
+            writeln!(
+                writer,
+                "{}",
+                serde_json::to_string_pretty(&output).unwrap_or_default()
+            )?;
         }
         OutputFormat::Csv => {
             if let Some(obj) = hit.as_object() {

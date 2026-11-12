@@ -9,17 +9,25 @@ pub fn run(ctx: &AppContext, args: &LsArgs) -> AppResult<()> {
 
     if let Some(site_name) = &args.site {
         // Show details of a specific site
-        let site = reg.get_site(site_name).ok_or_else(|| AppError::SiteNotFound {
-            name: site_name.clone(),
-            suggestion: Some("run 'algosearch ls' to see registered sites".to_string()),
-        })?;
+        let site = reg
+            .get_site(site_name)
+            .ok_or_else(|| AppError::SiteNotFound {
+                name: site_name.clone(),
+                suggestion: Some("run 'algosearch ls' to see registered sites".to_string()),
+            })?;
 
         ctx.presenter.success(site, |s| {
             let mut out = String::new();
             out.push_str(&format!("{}\n", s.name.bold()));
             out.push_str(&format!("  url:        {}\n", s.url));
-            out.push_str(&format!("  discovered: {}\n", s.discovered_at.format("%Y-%m-%d %H:%M")));
-            out.push_str(&format!("  verified:   {}\n", s.last_verified.format("%Y-%m-%d %H:%M")));
+            out.push_str(&format!(
+                "  discovered: {}\n",
+                s.discovered_at.format("%Y-%m-%d %H:%M")
+            ));
+            out.push_str(&format!(
+                "  verified:   {}\n",
+                s.last_verified.format("%Y-%m-%d %H:%M")
+            ));
             out.push_str(&format!("  method:     {}\n", s.discovery_method));
             out.push_str(&format!("  indices:    {}\n", s.indices.len()));
 

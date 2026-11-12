@@ -4,8 +4,7 @@ use crate::discovery::{self, DiscoveryResult};
 use crate::error::{AppError, AppResult};
 
 pub async fn run(ctx: &AppContext, args: &DiscoverArgs) -> AppResult<()> {
-    let url = url::Url::parse(&args.url)
-        .map_err(|e| AppError::InvalidUrl(e.to_string()))?;
+    let url = url::Url::parse(&args.url).map_err(|e| AppError::InvalidUrl(e.to_string()))?;
 
     ctx.presenter.progress("discovering credentials...");
 
@@ -38,7 +37,10 @@ pub async fn run(ctx: &AppContext, args: &DiscoverArgs) -> AppResult<()> {
             } else {
                 eprintln!("Could not auto-discover credentials at {}", args.url);
                 eprintln!("Try using browser devtools to manually extract the credentials,");
-                eprintln!("then run: algosearch add {} --credentials <appId>:<apiKey>:<indexName>", args.url);
+                eprintln!(
+                    "then run: algosearch add {} --credentials <appId>:<apiKey>:<indexName>",
+                    args.url
+                );
             }
         }
     }

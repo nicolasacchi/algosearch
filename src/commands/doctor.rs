@@ -28,11 +28,7 @@ pub async fn run(ctx: &AppContext) -> AppResult<()> {
     if ctx.registry_path.exists() {
         match Registry::load(&ctx.registry_path) {
             Ok(reg) => {
-                println!(
-                    "  {} registry: {} site(s)",
-                    "OK".green(),
-                    reg.sites.len()
-                );
+                println!("  {} registry: {} site(s)", "OK".green(), reg.sites.len());
 
                 // Validate each site
                 for (name, site) in &reg.sites {
@@ -56,27 +52,13 @@ pub async fn run(ctx: &AppContext) -> AppResult<()> {
                                 println!("  {} {}: valid", "OK".green(), name);
                             }
                             Ok(resp) if resp.status() == 403 => {
-                                println!(
-                                    "  {} {}: expired (403)",
-                                    "!!".red(),
-                                    name
-                                );
+                                println!("  {} {}: expired (403)", "!!".red(), name);
                             }
                             Ok(resp) => {
-                                println!(
-                                    "  {} {}: error ({})",
-                                    "!!".red(),
-                                    name,
-                                    resp.status()
-                                );
+                                println!("  {} {}: error ({})", "!!".red(), name, resp.status());
                             }
                             Err(e) => {
-                                println!(
-                                    "  {} {}: unreachable ({})",
-                                    "!!".red(),
-                                    name,
-                                    e
-                                );
+                                println!("  {} {}: unreachable ({})", "!!".red(), name, e);
                             }
                         }
                     }
@@ -87,10 +69,7 @@ pub async fn run(ctx: &AppContext) -> AppResult<()> {
             }
         }
     } else {
-        println!(
-            "  {} registry: not created yet",
-            "--".yellow()
-        );
+        println!("  {} registry: not created yet", "--".yellow());
     }
 
     // Agent detection status
@@ -99,10 +78,7 @@ pub async fn run(ctx: &AppContext) -> AppResult<()> {
         println!(
             "  {} agent mode: active ({})",
             ">>".cyan(),
-            ctx.agent_info
-                .detected_by
-                .as_deref()
-                .unwrap_or("unknown")
+            ctx.agent_info.detected_by.as_deref().unwrap_or("unknown")
         );
     } else {
         println!("  {} agent mode: inactive", "--".dimmed());

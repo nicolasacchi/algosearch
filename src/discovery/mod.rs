@@ -41,9 +41,9 @@ pub async fn discover(
         .get(url.as_str())
         .send()
         .await
-        .map_err(|e| AppError::Network(e))?;
+        .map_err(AppError::Network)?;
 
-    let html_body = resp.text().await.map_err(|e| AppError::Network(e))?;
+    let html_body = resp.text().await.map_err(AppError::Network)?;
 
     // Layer 1: HTML scanning
     if verbose {
@@ -166,9 +166,8 @@ fn extract_all_index_names(text: &str) -> Vec<String> {
 }
 
 /// Fetch algolia-related JS files and search them for index names.
-static JS_SRC_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?i)<script[^>]+src=(?:["']([^"']+)["']|([^\s>]+))"#).unwrap()
-});
+static JS_SRC_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?i)<script[^>]+src=(?:["']([^"']+)["']|([^\s>]+))"#).unwrap());
 
 async fn find_index_names_in_js(
     base_url: &url::Url,
@@ -190,9 +189,8 @@ async fn find_index_names_in_js(
     }
 
     // Also check importmap entries for algolia-related JS
-    static IMPORTMAP_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r#""[^"]*algolia[^"]*"\s*:\s*"([^"]+)""#).unwrap()
-    });
+    static IMPORTMAP_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r#""[^"]*algolia[^"]*"\s*:\s*"([^"]+)""#).unwrap());
     for cap in IMPORTMAP_RE.captures_iter(html) {
         if let Some(url_match) = cap.get(1) {
             if let Ok(resolved) = base_url.join(url_match.as_str()) {
