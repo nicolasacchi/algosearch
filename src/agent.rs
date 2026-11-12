@@ -67,16 +67,23 @@ pub fn detect(force_agent: bool, json_explicit: bool) -> AgentInfo {
 }
 
 fn check_parent_processes() -> Option<String> {
-    use sysinfo::{Pid, System};
+    use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System};
 
     let known_agents = ["claude", "cursor", "codex", "aider", "continue"];
     let mut sys = System::new();
-    sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
 
     let mut current_pid = Pid::from_u32(std::process::id());
 
-    // Walk up to 10 levels of parent processes
+    // Walk up to 10 levels of parent processes. Refresh ONLY the pid being
+    // inspected (name + parent come from /proc/<pid>/stat): refreshing every
+    // process scans all of /proc including per-thread files, which cost
+    // seconds per invocation on a busy host.
     for _ in 0..10 {
+        sys.refresh_processes_specifics(
+            ProcessesToUpdate::Some(&[current_pid]),
+            false,
+            ProcessRefreshKind::nothing(),
+        );
         let process = sys.process(current_pid)?;
         let name = process.name().to_string_lossy().to_lowercase();
 
