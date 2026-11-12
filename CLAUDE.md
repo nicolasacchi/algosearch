@@ -165,7 +165,7 @@ Auto-detects index schema and adapts search display:
 
 ```bash
 cargo build --release              # Build to target/release/algosearch
-make install                       # Install to ~/bin (or PREFIX=~/.local/bin)
+make install                       # Install to ~/.local/bin (override with PREFIX=...)
 cargo install --git https://github.com/nicolasacchi/algosearch   # From repo
 ```
 

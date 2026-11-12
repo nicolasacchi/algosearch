@@ -12,7 +12,7 @@ Most developer documentation sites embed public Algolia search-only API credenti
 curl -fsSL https://raw.githubusercontent.com/nicolasacchi/algosearch/main/install.sh | sh
 ```
 
-Downloads a pre-built binary for your platform and installs to `~/bin`. Set `INSTALL_DIR` to change the location.
+Downloads a pre-built binary for your platform and installs to `~/.local/bin`. Set `INSTALL_DIR` to change the location.
 
 ### From source
 
@@ -25,7 +25,7 @@ cargo install --git https://github.com/nicolasacchi/algosearch
 ```bash
 git clone https://github.com/nicolasacchi/algosearch
 cd algosearch
-make install    # builds and copies to ~/bin
+make install    # builds and installs to ~/.local/bin (override with PREFIX=...)
 ```
 
 ### Shell completions

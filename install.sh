@@ -2,7 +2,7 @@
 set -e
 
 REPO="nicolasacchi/algosearch"
-INSTALL_DIR="${INSTALL_DIR:-$HOME/bin}"
+INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 
 # Detect OS
 OS="$(uname -s)"
