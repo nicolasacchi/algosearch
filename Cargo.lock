@@ -15,7 +15,6 @@ dependencies = [
 name = "algosearch"
 version = "0.2.0"
 dependencies = [
- "anyhow",
  "chrono",
  "clap",
  "clap_complete",
@@ -93,12 +92,6 @@ dependencies = [
  "once_cell_polyfill",
  "windows-sys 0.61.2",
 ]
-
-[[package]]
-name = "anyhow"
-version = "1.0.104"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "atomic-waker"

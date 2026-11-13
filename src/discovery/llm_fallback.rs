@@ -13,7 +13,7 @@ pub fn generate_instructions(url: &url::Url) -> serde_json::Value {
                 "If null, execute: document.querySelectorAll('[data-docsearch-app-id], [data-algolia-app-id]').forEach(el => console.log(el.dataset))",
                 "If still null, intercept network requests matching *algolia.net* or *algolia.io* — the request headers will contain x-algolia-api-key and x-algolia-application-id",
                 "If still null, search all script elements for string patterns matching /[A-Z0-9]{10}/ near /[a-f0-9]{32}/ (algolia appId and apiKey formats)",
-                format!("Once found, validate by POSTing to https://{{appId}}-dsn.algolia.net/1/indexes/{{indexName}}/query with headers x-algolia-api-key and x-algolia-application-id, body {{\"query\":\"\",\"hitsPerPage\":1}}")
+                "Once found, validate by POSTing to https://{appId}-dsn.algolia.net/1/indexes/{indexName}/query with headers x-algolia-api-key and x-algolia-application-id, body {\"query\":\"\",\"hitsPerPage\":1}"
             ],
             "expected_output": {
                 "app_id": "10 char uppercase alphanumeric",

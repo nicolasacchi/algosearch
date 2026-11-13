@@ -16,7 +16,6 @@ scraper = "0.22"
 dirs = "6"
 chrono = { version = "0.4", features = ["serde"] }
 colored = "3"
-anyhow = "1"
 thiserror = "2"
 fs4 = "0.12"
 url = "2"
